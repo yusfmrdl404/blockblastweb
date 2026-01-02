@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Block Blast</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background: #f0f0f0;
+    }
+    #game {
+      display: grid;
+      grid-template-columns: repeat(8, 40px);
+      grid-template-rows: repeat(10, 40px);
+      gap: 2px;
+      background: white;
+      padding: 10px;
+      border-radius: 8px;
+    }
+    .block {
+      width: 40px;
+      height: 40px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div id="game"></div>
+
+  <script>
+    const colors = ['#FF5252', '#448AFF', '#69F0AE', '#FFD740', '#FF4081'];
+    const rows = 10;
+    const cols = 8;
+    const game = document.getElementById('game');
+    const grid = [];
+
+    // Izgarayı oluştur
+    for (let r = 0; r < rows; r++) {
+      grid[r] = [];
+      for (let c = 0; c < cols; c++) {
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const block = document.createElement('div');
+        block.className = 'block';
+        block.style.backgroundColor = color;
+        block.dataset.row = r;
+        block.dataset.col = c;
+        block.dataset.color = color;
+
+        block.addEventListener('click', () => onClick(r, c));
+        game.appendChild(block);
+        grid[r][c] = block;
+      }
+    }
+
+    function onClick(startRow, startCol) {
+      const startBlock = grid[startRow][startCol];
+      if (!startBlock || startBlock.style.display === 'none') return;
+
+      const targetColor = startBlock.dataset.color;
+      const visited = new Set();
+
+      floodFill(startRow, startCol, targetColor, visited);
+
+      if (visited.size <= 1) return; // Tek blok silinmez
+
+      visited.forEach(pos => {
+        const [r, c] = pos.split(',').map(Number);
+        grid[r][c].style.display = 'none';
+      });
+    }
+
+    function floodFill(r, c, targetColor, visited) {
+      if (r < 0 || r >= rows || c < 0 || c >= cols) return;
+      if (visited.has(`${r},${c}`)) return;
+
+      const block = grid[r][c];
+      if (!block || block.style.display === 'none') return;
+      if (block.dataset.color !== targetColor) return;
+
+      visited.add(`${r},${c}`);
+      floodFill(r + 1, c, targetColor, visited);
+      floodFill(r - 1, c, targetColor, visited);
+      floodFill(r, c + 1, targetColor, visited);
+      floodFill(r, c - 1, targetColor, visited);
+    }
+  </script>
+</body>
+</html>
