@@ -1,87 +1,191 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>Block Blast</title>
   <style>
-    body {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
+    * {
+      box-sizing: border-box;
       margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      padding: 20px;
       background: #f0f0f0;
+      transition: background 0.3s;
+    }
+    body.dark {
+      background: #121212;
+    }
+    h1 {
+      margin: 10px 0 15px;
+      color: #333;
+    }
+    body.dark h1 {
+      color: #fff;
+    }
+    #ui {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    #score {
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+      min-width: 100px;
+      text-align: center;
+    }
+    body.dark #score {
+      color: #fff;
+    }
+    button {
+      padding: 8px 16px;
+      font-size: 14px;
+      border: none;
+      border-radius: 6px;
+      background: #448AFF;
+      color: white;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #2962FF;
     }
     #game {
       display: grid;
-      grid-template-columns: repeat(8, 40px);
-      grid-template-rows: repeat(10, 40px);
       gap: 2px;
+      padding: 12px;
       background: white;
-      padding: 10px;
-      border-radius: 8px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    body.dark #game {
+      background: #1e1e1e;
     }
     .block {
       width: 40px;
       height: 40px;
       cursor: pointer;
-      border-radius: 4px;
+      border-radius: 8px;
+      box-shadow: inset 0 -4px 0 rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.2);
+      transition: transform 0.1s;
+    }
+    .block:active {
+      transform: scale(0.92);
+    }
+    .block.disappearing {
+      animation: fadeOut 0.4s forwards;
+    }
+    @keyframes fadeOut {
+      to {
+        opacity: 0;
+        transform: scale(0.5);
+      }
+    }
+    @media (max-width: 400px) {
+      .block {
+        width: 32px;
+        height: 32px;
+      }
+      #game {
+        padding: 8px;
+      }
     }
   </style>
 </head>
 <body>
+  <h1>Block Blast</h1>
+  <div id="ui">
+    <div id="score">Skor: 0</div>
+    <button id="easyBtn">Kolay</button>
+    <button id="hardBtn">Zor</button>
+    <button id="themeBtn">🌙 Koyu Tema</button>
+    <button id="restartBtn">Yeniden Başla</button>
+  </div>
   <div id="game"></div>
 
   <script>
-    const colors = ['#FF5252', '#448AFF', '#69F0AE', '#FFD740', '#FF4081'];
-    const rows = 10;
-    const cols = 8;
+    // Ayarlar
+    const colors = ['#FF5252', '#448AFF', '#69F0AE', '#FFD740', '#FF4081', '#7C4DFF'];
+    let currentRows = 8;
+    let currentCols = 6;
+    let score = 0;
+    let darkMode = false;
+    let grid = [];
     const game = document.getElementById('game');
-    const grid = [];
+    const scoreEl = document.getElementById('score');
 
-    // Izgarayı oluştur
-    for (let r = 0; r < rows; r++) {
-      grid[r] = [];
-      for (let c = 0; c < cols; c++) {
-        const color = colors[Math.floor(Math.random() * colors.length)];
-        const block = document.createElement('div');
-        block.className = 'block';
-        block.style.backgroundColor = color;
-        block.dataset.row = r;
-        block.dataset.col = c;
-        block.dataset.color = color;
+    // Oyunu başlat
+    function startGame(rows, cols) {
+      currentRows = rows;
+      currentCols = cols;
+      score = 0;
+      scoreEl.textContent = `Skor: ${score}`;
+      game.innerHTML = '';
+      grid = [];
 
-        block.addEventListener('click', () => onClick(r, c));
-        game.appendChild(block);
-        grid[r][c] = block;
+      game.style.gridTemplateColumns = `repeat(${cols}, 40px)`;
+      game.style.gridTemplateRows = `repeat(${rows}, 40px)`;
+
+      for (let r = 0; r < rows; r++) {
+        grid[r] = [];
+        for (let c = 0; c < cols; c++) {
+          const color = colors[Math.floor(Math.random() * colors.length)];
+          const block = document.createElement('div');
+          block.className = 'block';
+          block.style.backgroundColor = color;
+          block.dataset.row = r;
+          block.dataset.col = c;
+          block.dataset.color = color;
+          block.addEventListener('click', () => handleBlockClick(r, c));
+          game.appendChild(block);
+          grid[r][c] = block;
+        }
       }
     }
 
-    function onClick(startRow, startCol) {
+    function handleBlockClick(startRow, startCol) {
       const startBlock = grid[startRow][startCol];
-      if (!startBlock || startBlock.style.display === 'none') return;
+      if (!startBlock || startBlock.classList.contains('disappearing')) return;
 
       const targetColor = startBlock.dataset.color;
       const visited = new Set();
-
       floodFill(startRow, startCol, targetColor, visited);
 
-      if (visited.size <= 1) return; // Tek blok silinmez
+      if (visited.size <= 1) return;
 
+      // Skor artır
+      score += visited.size * 10;
+      scoreEl.textContent = `Skor: ${score}`;
+
+      // Animasyonla sil
       visited.forEach(pos => {
         const [r, c] = pos.split(',').map(Number);
-        grid[r][c].style.display = 'none';
+        if (grid[r][c]) {
+          grid[r][c].classList.add('disappearing');
+          setTimeout(() => {
+            if (grid[r][c]) grid[r][c].style.display = 'none';
+          }, 400);
+        }
       });
     }
 
     function floodFill(r, c, targetColor, visited) {
-      if (r < 0 || r >= rows || c < 0 || c >= cols) return;
+      if (r < 0 || r >= currentRows || c < 0 || c >= currentCols) return;
       if (visited.has(`${r},${c}`)) return;
 
       const block = grid[r][c];
-      if (!block || block.style.display === 'none') return;
-      if (block.dataset.color !== targetColor) return;
+      if (!block || block.classList.contains('disappearing') || block.dataset.color !== targetColor) return;
 
       visited.add(`${r},${c}`);
       floodFill(r + 1, c, targetColor, visited);
@@ -89,6 +193,20 @@
       floodFill(r, c + 1, targetColor, visited);
       floodFill(r, c - 1, targetColor, visited);
     }
+
+    // Butonlar
+    document.getElementById('easyBtn').addEventListener('click', () => startGame(8, 6));
+    document.getElementById('hardBtn').addEventListener('click', () => startGame(10, 12));
+    document.getElementById('restartBtn').addEventListener('click', () => startGame(currentRows, currentCols));
+
+    document.getElementById('themeBtn').addEventListener('click', () => {
+      darkMode = !darkMode;
+      document.body.classList.toggle('dark', darkMode);
+      document.getElementById('themeBtn').textContent = darkMode ? '☀️ Açık Tema' : '🌙 Koyu Tema';
+    });
+
+    // Başlangıç: Kolay mod
+    startGame(8, 6);
   </script>
 </body>
 </html>
